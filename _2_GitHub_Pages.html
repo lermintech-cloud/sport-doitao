@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การแข่งขันกีฬาเครือข่ายดอยเต่าสหศึกษา ปีการศึกษา 2569</title>
+  <meta name="theme-color" content="#073b4c">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#home" aria-label="หน้าหลัก">
+        <span class="brand-mark">ก</span>
+        <span>
+          <strong>กีฬาเครือข่ายดอยเต่าสหศึกษา</strong>
+          <small>ปีการศึกษา 2569</small>
+        </span>
+      </a>
+      <nav class="nav">
+        <button class="nav-link active" data-view="schedule">โปรแกรมแข่งขัน</button>
+        <button class="nav-link" data-view="bracket">สูจิบัตร / ผังสาย</button>
+        <button class="nav-link" data-view="results">ผลการแข่งขัน</button>
+        <button class="judge-button" id="openJudge">สำหรับกรรมการ</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero" id="home">
+      <div>
+        <p class="eyebrow">DOI TAO SAHASAUKSA EDUCATION NETWORK</p>
+        <h1 id="eventName">การแข่งขันกีฬาเครือข่ายดอยเต่าสหศึกษา</h1>
+        <p class="hero-description" id="eventDetail">กำลังเชื่อมต่อข้อมูลการแข่งขัน…</p>
+      </div>
+      <div class="hero-status">
+        <span class="pulse"></span>
+        <span id="liveStatus">อัปเดตผลการแข่งขัน</span>
+      </div>
+    </section>
+
+    <section class="stats" id="stats">
+      <article class="stat-card">
+        <span>รายการแข่งขัน</span>
+        <strong id="sportCount">–</strong>
+      </article>
+      <article class="stat-card">
+        <span>จำนวนคู่แข่งขัน</span>
+        <strong id="matchCount">–</strong>
+      </article>
+      <article class="stat-card">
+        <span>แข่งขันจบแล้ว</span>
+        <strong id="finishedCount">–</strong>
+      </article>
+      <article class="stat-card">
+        <span>กำลังแข่งขัน</span>
+        <strong id="liveCount">–</strong>
+      </article>
+    </section>
+
+    <section class="filters">
+      <div class="field">
+        <label for="competitionFilter">ชนิดกีฬา / รุ่น</label>
+        <select id="competitionFilter">
+          <option value="">ทุกประเภทการแข่งขัน</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="dateFilter">วันแข่งขัน</label>
+        <select id="dateFilter">
+          <option value="">ทุกวัน</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="statusFilter">สถานะ</label>
+        <select id="statusFilter">
+          <option value="">ทุกสถานะ</option>
+          <option value="scheduled">ยังไม่แข่ง</option>
+          <option value="live">กำลังแข่งขัน</option>
+          <option value="finished">จบการแข่งขัน</option>
+        </select>
+      </div>
+      <button class="secondary-button" id="refreshButton">รีเฟรชข้อมูล</button>
+    </section>
+
+    <section class="content-section view active" id="scheduleView">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">MATCH SCHEDULE</p>
+          <h2>โปรแกรมการแข่งขัน</h2>
+        </div>
+        <span class="result-count" id="scheduleCount"></span>
+      </div>
+      <div class="match-list" id="scheduleList"></div>
+    </section>
+
+    <section class="content-section view" id="bracketView">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">TOURNAMENT BRACKET</p>
+          <h2>สูจิบัตร / ผังสายการแข่งขัน</h2>
+        </div>
+      </div>
+      <div class="notice">
+        ผังสายจะแสดงทีมที่ผ่านเข้ารอบทันทีเมื่อกรรมการยืนยันผลการแข่งขัน
+      </div>
+      <div id="bracketList"></div>
+    </section>
+
+    <section class="content-section view" id="resultsView">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">MATCH RESULTS</p>
+          <h2>ผลการแข่งขัน</h2>
+        </div>
+      </div>
+      <div class="match-list" id="resultsList"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>การแข่งขันกีฬา-กรีฑานักเรียน ระดับเครือข่ายพัฒนาการศึกษาดอยเต่าสหศึกษา ประจำปีการศึกษา 2569</p>
+    <p id="lastUpdated">ยังไม่มีข้อมูลการอัปเดต</p>
+  </footer>
+
+  <dialog id="judgeDialog">
+    <form method="dialog" class="judge-modal" id="judgeForm">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">JUDGE PANEL</p>
+          <h2>บันทึกผลการแข่งขัน</h2>
+        </div>
+        <button class="icon-button" value="cancel" aria-label="ปิด">×</button>
+      </div>
+
+      <p class="modal-help">
+        เมื่อยืนยันผล ผู้ชนะและผู้แพ้จะถูกส่งไปยังคู่ถัดไปตามผังโดยอัตโนมัติ
+      </p>
+
+      <div class="field">
+        <label for="judgeCode">รหัสกรรมการ</label>
+        <input id="judgeCode" type="password" autocomplete="current-password" required placeholder="กรอกรหัสกรรมการ">
+      </div>
+
+      <div class="field">
+        <label for="judgeName">ชื่อกรรมการ</label>
+        <input id="judgeName" type="text" required placeholder="เช่น นายสมชาย ใจดี">
+      </div>
+
+      <div class="field">
+        <label for="judgeMatch">เลือกคู่แข่งขัน</label>
+        <select id="judgeMatch" required></select>
+      </div>
+
+      <div class="score-grid">
+        <div class="field">
+          <label id="teamALabel" for="scoreA">ทีม A</label>
+          <input id="scoreA" type="number" min="0" inputmode="numeric" required>
+        </div>
+        <div class="vs">VS</div>
+        <div class="field">
+          <label id="teamBLabel" for="scoreB">ทีม B</label>
+          <input id="scoreB" type="number" min="0" inputmode="numeric" required>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="judgeNote">หมายเหตุ</label>
+        <textarea id="judgeNote" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม หากมี"></textarea>
+      </div>
+
+      <p class="form-message" id="formMessage"></p>
+
+      <div class="modal-actions">
+        <button class="secondary-button" value="cancel">ยกเลิก</button>
+        <button class="primary-button" type="submit" id="saveResultButton">ยืนยันและบันทึกผล</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
