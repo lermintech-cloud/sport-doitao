@@ -1,338 +1,358 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycby1AoIUIq8DHZHJMAZJOwx98M_Ki45XoHLBS7Riowhu1beChd5Re5TXLHiBojK-6Edd/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw64CXChOxieAaDbfSrqffToA1Io061xC2zLlMibrVvGm3L8OWCB3dJe2n67wOSv2rp/exec';
 
-const state = {
+let appState = {
   settings: [],
   teams: [],
   competitions: [],
-  matches: []
+  matches: [],
+  standings: []
 };
 
-const $ = (selector) => document.querySelector(selector);
+document.addEventListener('DOMContentLoaded', () => {
+  initNavigation();
+  initModal();
+  initFilters();
+  loadData();
+});
 
-function valueOfSetting(key) {
-  const row = state.settings.find(item => item.key === key);
-  return row ? row.value : '';
+function initNavigation() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+      
+      const targetView = e.target.dataset.view;
+      e.target.classList.add('active');
+      document.getElementById(`${targetView}View`).classList.add('active');
+    });
+  });
+
+  document.getElementById('btnRefresh').addEventListener('click', () => loadData());
 }
 
-function teamName(teamId, fallback = '') {
-  if (!teamId) return fallback || 'รอผลการแข่งขัน';
-  const team = state.teams.find(item => item.id === teamId);
-  return team ? team.name : fallback || 'รอผลการแข่งขัน';
-}
+function initModal() {
+  const dialog = document.getElementById('judgeDialog');
+  document.getElementById('openJudgeModal').addEventListener('click', () => {
+    populateJudgeMatchSelect();
+    dialog.showModal();
+  });
+  document.getElementById('closeModal').addEventListener('click', () => dialog.close());
 
-function competitionName(id) {
-  const item = state.competitions.find(comp => comp.id === id);
-  return item ? `${item.sport} ${item.category}` : id;
-}
-
-function statusText(status) {
-  return {
-    scheduled: 'ยังไม่แข่ง',
-    live: 'กำลังแข่ง',
-    finished: 'จบการแข่งขัน',
-    postponed: 'เลื่อนแข่งขัน'
-  }[status] || 'ยังไม่แข่ง';
-}
-
-function getFilteredMatches() {
-  const competitionId = $('#competitionFilter').value;
-  const date = $('#dateFilter').value;
-  const status = $('#statusFilter').value;
-
-  return state.matches.filter(match => {
-    return (!competitionId || match.competitionId === competitionId) &&
-      (!date || match.date === date) &&
-      (!status || match.status === status);
+  document.getElementById('judgeMatchSelect').addEventListener('change', updateJudgeModalLabels);
+  
+  document.getElementById('btnSetLive').addEventListener('click', () => handleMatchAction('setLive'));
+  document.getElementById('judgeForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleMatchAction('saveResult');
   });
 }
 
-function matchCard(match) {
-  const scoreA = match.scoreA === '' || match.scoreA === null ? '–' : match.scoreA;
-  const scoreB = match.scoreB === '' || match.scoreB === null ? '–' : match.scoreB;
-  const teamA = teamName(match.teamAId, match.teamASource);
-  const teamB = teamName(match.teamBId, match.teamBSource);
-  const aWinner = match.winnerId && match.winnerId === match.teamAId ? 'winner' : '';
-  const bWinner = match.winnerId && match.winnerId === match.teamBId ? 'winner' : '';
+function initFilters() {
+  ['compFilter', 'dateFilter', 'statusFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderAllViews);
+  });
+}
+
+async function loadData() {
+  try {
+    const res = await fetch(`${API_URL}?action=bootstrap&t=${Date.now()}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message || 'โหลดข้อมูลไม่สำเร็จ');
+
+    appState.settings = json.settings || [];
+    appState.teams = json.teams || [];
+    appState.competitions = json.competitions || [];
+    appState.matches = json.matches || [];
+    appState.standings = json.standings || [];
+
+    updateUI();
+  } catch (err) {
+    console.error(err);
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: ' + err.message);
+  }
+}
+
+function updateUI() {
+  const eventName = appState.settings.find(s => s.key === 'eventName')?.value || 'การแข่งขันกีฬาเครือข่ายดอยเต่า';
+  document.getElementById('eventName').textContent = eventName;
+  document.getElementById('lastUpdated').textContent = 'อัปเดตล่าสุด: ' + new Date().toLocaleTimeString('th-TH');
+
+  // Stats
+  document.getElementById('statCompetitions').textContent = appState.competitions.length;
+  document.getElementById('statMatches').textContent = appState.matches.length;
+  document.getElementById('statFinished').textContent = appState.matches.filter(m => m.status === 'finished').length;
+
+  populateDropdowns();
+  renderAllViews();
+}
+
+function populateDropdowns() {
+  const compSelect = document.getElementById('compFilter');
+  const currentComp = compSelect.value;
+  compSelect.innerHTML = '<option value="">-- ทุกประเภทกีฬา --</option>' + 
+    appState.competitions.map(c => `<option value="${c.id}">${c.sport} (${c.category})</option>`).join('');
+  compSelect.value = currentComp;
+
+  const dates = [...new Set(appState.matches.map(m => m.date).filter(Boolean))];
+  const dateSelect = document.getElementById('dateFilter');
+  const currentDate = dateSelect.value;
+  dateSelect.innerHTML = '<option value="">-- ทุกวัน --</option>' + 
+    dates.map(d => `<option value="${d}">${d}</option>`).join('');
+  dateSelect.value = currentDate;
+}
+
+function renderAllViews() {
+  renderSchedule();
+  renderResults();
+  renderStandings();
+  renderBrackets();
+}
+
+function getFilteredMatches() {
+  const compId = document.getElementById('compFilter').value;
+  const date = document.getElementById('dateFilter').value;
+  const status = document.getElementById('statusFilter').value;
+
+  return appState.matches.filter(m => {
+    return (!compId || m.competitionId === compId) &&
+           (!date || m.date === date) &&
+           (!status || m.status === status);
+  });
+}
+
+function getTeamName(teamId, fallback) {
+  if (!teamId) return fallback || 'รอผลการแข่งขัน';
+  const team = appState.teams.find(t => t.id === teamId);
+  return team ? team.name : (fallback || teamId);
+}
+
+function getCompName(compId) {
+  const c = appState.competitions.find(x => x.id === compId);
+  return c ? `${c.sport} (${c.category})` : compId;
+}
+
+function matchCardHTML(m) {
+  const tA = getTeamName(m.teamAId, m.teamASource);
+  const tB = getTeamName(m.teamBId, m.teamBSource);
+  const scoreA = (m.scoreA !== '' && m.scoreA !== null) ? m.scoreA : '-';
+  const scoreB = (m.scoreB !== '' && m.scoreB !== null) ? m.scoreB : '-';
+  
+  const isFinished = m.status === 'finished';
+  const aWin = isFinished && Number(m.scoreA) > Number(m.scoreB);
+  const bWin = isFinished && Number(m.scoreB) > Number(m.scoreA);
+
+  const statusText = { scheduled: 'ยังไม่แข่ง', live: 'กำลังแข่ง 🟢', finished: 'จบการแข่งขัน' }[m.status] || m.status;
 
   return `
-    <article class="match-card ${match.status}">
-      <div class="match-meta">
-        <strong>${competitionName(match.competitionId)}</strong>
-        คู่ที่ ${match.matchNo} · ${match.round}<br>
-        ${match.date || 'ไม่ระบุวัน'} ${match.time ? `· ${match.time} น.` : ''}
+    <div class="match-card ${m.status}">
+      <div class="match-header-info">
+        <span class="match-sport-tag">${getCompName(m.competitionId)}</span>
+        <span>คู่ที่ ${m.matchNo} · ${m.round}</span>
       </div>
-      <div class="teams">
-        <div class="team-line ${aWinner}">
-          <span class="team-name">${teamA}</span>
-          <strong class="team-score">${scoreA}</strong>
+      <div class="match-teams-box">
+        <div class="team-row ${aWin ? 'winner' : ''}">
+          <span>${tA}</span>
+          <span class="team-score-num">${scoreA}</span>
         </div>
-        <div class="team-line ${bWinner}">
-          <span class="team-name">${teamB}</span>
-          <strong class="team-score">${scoreB}</strong>
+        <div class="team-row ${bWin ? 'winner' : ''}">
+          <span>${tB}</span>
+          <span class="team-score-num">${scoreB}</span>
         </div>
       </div>
-      <span class="status ${match.status}">${statusText(match.status)}</span>
-    </article>
-  `;
-}
-
-function renderSchedule() {
-  const matches = getFilteredMatches()
-    .sort((a, b) => `${a.date}-${a.time}-${a.competitionId}-${a.matchNo}`
-      .localeCompare(`${b.date}-${b.time}-${b.competitionId}-${b.matchNo}`, 'th'));
-
-  $('#scheduleCount').textContent = `${matches.length} คู่แข่งขัน`;
-  $('#scheduleList').innerHTML = matches.length
-    ? matches.map(matchCard).join('')
-    : '<div class="empty">ไม่พบรายการแข่งขันตามเงื่อนไขที่เลือก</div>';
-}
-
-function renderResults() {
-  const results = getFilteredMatches()
-    .filter(match => match.status === 'finished')
-    .sort((a, b) => `${b.updatedAt}`.localeCompare(`${a.updatedAt}`));
-
-  $('#resultsList').innerHTML = results.length
-    ? results.map(matchCard).join('')
-    : '<div class="empty">ยังไม่มีผลการแข่งขันที่ยืนยันแล้ว</div>';
-}
-
-function bracketMatch(match) {
-  const scoreA = match.scoreA === '' || match.scoreA === null ? '' : match.scoreA;
-  const scoreB = match.scoreB === '' || match.scoreB === null ? '' : match.scoreB;
-  return `
-    <div class="bracket-match">
-      <span class="bracket-number">คู่ที่ ${match.matchNo}</span>
-      <div class="bracket-team">
-        <span>${teamName(match.teamAId, match.teamASource)}</span>
-        <strong>${scoreA}</strong>
-      </div>
-      <div class="bracket-team">
-        <span>${teamName(match.teamBId, match.teamBSource)}</span>
-        <strong>${scoreB}</strong>
+      <div class="match-footer-info">
+        <span>📅 ${m.date || '-'} ⏰ ${m.time || '-'} น. (${m.venue || '-'})</span>
+        <span class="status-pill ${m.status}">${statusText}</span>
       </div>
     </div>
   `;
 }
 
-function renderBracket() {
-  const selected = $('#competitionFilter').value;
-  const comps = state.competitions.filter(comp => !selected || comp.id === selected);
+function renderSchedule() {
+  const matches = getFilteredMatches();
+  document.getElementById('scheduleCount').textContent = matches.length + ' คู่';
+  const list = document.getElementById('scheduleList');
+  list.innerHTML = matches.length ? matches.map(matchCardHTML).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">ไม่พบรายการแข่งขันตามเงื่อนไข</p>';
+}
 
-  const html = comps.map(comp => {
-    const matches = state.matches.filter(match => match.competitionId === comp.id);
-    const semis = matches.filter(match => match.round.includes('รอบรอง'));
-    const thirds = matches.filter(match => match.round.includes('ชิงอันดับ 3'));
-    const finals = matches.filter(match => match.round.includes('ชิงชนะเลิศ'));
+function renderResults() {
+  const matches = getFilteredMatches().filter(m => m.status === 'finished');
+  document.getElementById('resultsCount').textContent = matches.length + ' คู่';
+  const list = document.getElementById('resultsList');
+  list.innerHTML = matches.length ? matches.map(matchCardHTML).join('') : '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px;">ยังไม่มีผลการแข่งขันที่เสร็จสิ้น</p>';
+}
 
-    if (!semis.length && !thirds.length && !finals.length) return '';
+function renderStandings() {
+  const compId = document.getElementById('compFilter').value;
+  const filtered = appState.standings.filter(s => !compId || s.competitionId === compId);
+  const container = document.getElementById('standingsContainer');
 
+  if (!filtered.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">ไม่มีข้อมูลตารางคะแนนในประเภทนี้</p>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(group => {
+    const compName = getCompName(group.competitionId);
     return `
-      <section class="bracket-sport">
-        <h3>${comp.sport} ${comp.category}</h3>
-        <div class="bracket-grid">
-          <div class="bracket-column">
-            <h4>รอบรองชนะเลิศ</h4>
-            ${semis.map(bracketMatch).join('') || '<p>ไม่มีข้อมูล</p>'}
-          </div>
-          <div class="bracket-column">
-            <h4>ชิงอันดับ 3</h4>
-            ${thirds.map(bracketMatch).join('') || '<p>ไม่มีข้อมูล</p>'}
-          </div>
-          <div class="bracket-column">
-            <h4>ชิงชนะเลิศ</h4>
-            ${finals.map(bracketMatch).join('') || '<p>ไม่มีข้อมูล</p>'}
-          </div>
+      <div class="standings-group-box">
+        <h3 class="standings-group-title">🏆 ${compName} — สาย ${group.groupName}</h3>
+        <div class="table-responsive">
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>อันดับ</th>
+                <th>ทีมโรงเรียน</th>
+                <th>แข่ง</th>
+                <th>ชนะ</th>
+                <th>เสมอ</th>
+                <th>แพ้</th>
+                <th>ได้</th>
+                <th>เสีย</th>
+                <th>ผลต่าง</th>
+                <th>คะแนน</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.standings.map(row => `
+                <tr>
+                  <td><strong>#${row.rank}</strong></td>
+                  <td>${row.teamName}</td>
+                  <td>${row.played}</td>
+                  <td>${row.won}</td>
+                  <td>${row.drawn}</td>
+                  <td>${row.lost}</td>
+                  <td>${row.scoreFor}</td>
+                  <td>${row.scoreAgainst}</td>
+                  <td>${row.difference > 0 ? '+' + row.difference : row.difference}</td>
+                  <td><strong>${row.points}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
-      </section>
+      </div>
     `;
   }).join('');
-
-  $('#bracketList').innerHTML = html || '<div class="empty">รายการนี้ไม่มีผังรอบแพ้คัดออก</div>';
 }
 
-function renderStats() {
-  $('#sportCount').textContent = state.competitions.length;
-  $('#matchCount').textContent = state.matches.length;
-  $('#finishedCount').textContent = state.matches.filter(m => m.status === 'finished').length;
-  $('#liveCount').textContent = state.matches.filter(m => m.status === 'live').length;
-}
+function renderBrackets() {
+  const compId = document.getElementById('compFilter').value;
+  const comps = appState.competitions.filter(c => (!compId || c.id === compId) && c.format.includes('รอบแพ้คัดออก'));
+  const container = document.getElementById('bracketContainer');
 
-function populateFilters() {
-  const competitionFilter = $('#competitionFilter');
-  const currentCompetition = competitionFilter.value;
-  competitionFilter.innerHTML = '<option value="">ทุกประเภทการแข่งขัน</option>' +
-    state.competitions.map(comp =>
-      `<option value="${comp.id}">${comp.sport} ${comp.category}</option>`
-    ).join('');
-  competitionFilter.value = currentCompetition;
-
-  const dates = [...new Set(state.matches.map(m => m.date).filter(Boolean))];
-  const dateFilter = $('#dateFilter');
-  const currentDate = dateFilter.value;
-  dateFilter.innerHTML = '<option value="">ทุกวัน</option>' +
-    dates.map(date => `<option value="${date}">${date}</option>`).join('');
-  dateFilter.value = currentDate;
-}
-
-function populateJudgeMatches() {
-  const select = $('#judgeMatch');
-  const available = state.matches.filter(match =>
-    match.teamAId && match.teamBId && match.status !== 'finished'
-  );
-
-  select.innerHTML = available.length
-    ? available.map(match => `
-      <option value="${match.id}">
-        ${competitionName(match.competitionId)} | คู่ ${match.matchNo} |
-        ${teamName(match.teamAId)} พบ ${teamName(match.teamBId)}
-      </option>
-    `).join('')
-    : '<option value="">ไม่มีคู่ที่พร้อมบันทึกผล</option>';
-
-  updateJudgeTeamLabels();
-}
-
-function updateJudgeTeamLabels() {
-  const match = state.matches.find(item => item.id === $('#judgeMatch').value);
-  $('#teamALabel').textContent = match ? teamName(match.teamAId) : 'ทีม A';
-  $('#teamBLabel').textContent = match ? teamName(match.teamBId) : 'ทีม B';
-}
-
-function renderAll() {
-  renderStats();
-  renderSchedule();
-  renderResults();
-  renderBracket();
-  populateJudgeMatches();
-}
-
-async function loadData(showLoading = true) {
-  if (!API_URL || API_URL.includes('PUT_YOUR')) {
-    throw new Error('กรุณาใส่ลิงก์ Google Apps Script Web App ในไฟล์ app.js ก่อน');
-  }
-
-  if (showLoading) {
-    $('#scheduleList').innerHTML = '<div class="loading">กำลังโหลดข้อมูลการแข่งขัน…</div>';
-  }
-
-  const response = await fetch(`${API_URL}?action=bootstrap&t=${Date.now()}`);
-  const data = await response.json();
-
-  if (!data.ok) throw new Error(data.message || 'ไม่สามารถโหลดข้อมูลได้');
-
-  state.settings = data.settings || [];
-  state.teams = data.teams || [];
-  state.competitions = data.competitions || [];
-  state.matches = data.matches || [];
-
-  $('#eventName').textContent = valueOfSetting('eventName') || 'การแข่งขันกีฬาเครือข่ายดอยเต่าสหศึกษา ปีการศึกษา 2569';
-  $('#eventDetail').textContent = `${valueOfSetting('operationalDates') || ''} · ${valueOfSetting('venue') || ''}`;
-  $('#lastUpdated').textContent = `อัปเดตข้อมูลล่าสุด: ${new Date().toLocaleString('th-TH')}`;
-
-  populateFilters();
-  renderAll();
-}
-
-function switchView(viewName) {
-  document.querySelectorAll('.nav-link').forEach(button => {
-    button.classList.toggle('active', button.dataset.view === viewName);
-  });
-  document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-  $(`#${viewName}View`).classList.add('active');
-}
-
-async function saveResult(event) {
-  event.preventDefault();
-
-  const matchId = $('#judgeMatch').value;
-  const scoreA = $('#scoreA').value;
-  const scoreB = $('#scoreB').value;
-  const message = $('#formMessage');
-  const saveButton = $('#saveResultButton');
-
-  message.textContent = '';
-  message.className = 'form-message';
-
-  if (!matchId) {
-    message.textContent = 'ไม่พบคู่แข่งขันที่พร้อมบันทึกผล';
+  if (!comps.length) {
+    container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;">ไม่มีผังสายการแข่งขันในประเภทนี้</p>';
     return;
   }
 
-  if (scoreA === scoreB) {
-    message.textContent = 'คะแนนต้องไม่เสมอกัน กรุณาระบุผลตัดสินก่อนบันทึก';
+  container.innerHTML = comps.map(comp => {
+    const matches = appState.matches.filter(m => m.competitionId === comp.id);
+    const semis = matches.filter(m => m.round.includes('รอบรอง') || m.round.includes('รอบก่อนรอง'));
+    const thirds = matches.filter(m => m.round.includes('ชิงอันดับ 3'));
+    const finals = matches.filter(m => m.round.includes('ชิงชนะเลิศ'));
+
+    const renderCol = (items) => items.map(m => `
+      <div class="bracket-match-item">
+        <span class="bracket-match-no">คู่ที่ ${m.matchNo} · ${m.round}</span>
+        <div class="bracket-team-line">
+          <span>${getTeamName(m.teamAId, m.teamASource)}</span>
+          <strong>${m.scoreA ?? '-'}</strong>
+        </div>
+        <div class="bracket-team-line">
+          <span>${getTeamName(m.teamBId, m.teamBSource)}</span>
+          <strong>${m.scoreB ?? '-'}</strong>
+        </div>
+      </div>
+    `).join('') || '<p style="font-size:12px;color:var(--text-muted);">ไม่มีข้อมูล</p>';
+
+    return `
+      <div class="bracket-sport-box">
+        <h3>🏅 ${comp.sport} (${comp.category})</h3>
+        <div class="bracket-columns">
+          <div>
+            <div class="bracket-col-title">รอบก่อนรอง / รองชนะเลิศ</div>
+            ${renderCol(semis)}
+          </div>
+          <div>
+            <div class="bracket-col-title">ชิงอันดับ 3</div>
+            ${renderCol(thirds)}
+          </div>
+          <div>
+            <div class="bracket-col-title">ชิงชนะเลิศ</div>
+            ${renderCol(finals)}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateJudgeMatchSelect() {
+  const select = document.getElementById('judgeMatchSelect');
+  const available = appState.matches.filter(m => m.teamAId && m.teamBId);
+  select.innerHTML = available.map(m => `
+    <option value="${m.id}">
+      [${getCompName(m.competitionId)}] คู่ ${m.matchNo} : ${getTeamName(m.teamAId)} vs ${getTeamName(m.teamBId)} (${m.status})
+    </option>
+  `).join('');
+  updateJudgeModalLabels();
+}
+
+function updateJudgeModalLabels() {
+  const matchId = document.getElementById('judgeMatchSelect').value;
+  const match = appState.matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  document.getElementById('labelTeamA').textContent = getTeamName(match.teamAId, match.teamASource);
+  document.getElementById('labelTeamB').textContent = getTeamName(match.teamBId, match.teamBSource);
+  document.getElementById('scoreA').value = match.scoreA !== '' ? match.scoreA : 0;
+  document.getElementById('scoreB').value = match.scoreB !== '' ? match.scoreB : 0;
+}
+
+async function handleMatchAction(actionType) {
+  const matchId = document.getElementById('judgeMatchSelect').value;
+  const judgeCode = document.getElementById('judgeCode').value;
+  const judgeName = document.getElementById('judgeName').value;
+  const scoreA = document.getElementById('scoreA').value;
+  const scoreB = document.getElementById('scoreB').value;
+  const note = document.getElementById('judgeNote').value;
+  const msgEl = document.getElementById('modalMessage');
+
+  if (!judgeCode || !judgeName) {
+    msgEl.style.color = 'var(--danger)';
+    msgEl.textContent = 'กรุณากรอกรหัสผ่านและชื่อกรรมการให้ครบถ้วน';
     return;
   }
 
-  saveButton.disabled = true;
-  saveButton.textContent = 'กำลังบันทึก…';
+  msgEl.style.color = 'var(--text-muted)';
+  msgEl.textContent = 'กำลังบันทึกข้อมูล...';
 
   try {
-    const response = await fetch(API_URL, {
+    const res = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        action: 'saveResult',
+        action: actionType,
         matchId,
+        judgeCode,
+        judgeName,
         scoreA,
         scoreB,
-        judgeCode: $('#judgeCode').value,
-        judgeName: $('#judgeName').value.trim(),
-        note: $('#judgeNote').value.trim()
+        note
       })
     });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.message);
 
-    const data = await response.json();
-    if (!data.ok) throw new Error(data.message || 'บันทึกผลไม่สำเร็จ');
-
-    message.textContent = data.message;
-    message.classList.add('success');
-    await loadData(false);
-
+    msgEl.style.color = 'var(--success)';
+    msgEl.textContent = json.message;
+    
+    await loadData();
     setTimeout(() => {
-      $('#judgeDialog').close();
-      $('#judgeForm').reset();
-    }, 1000);
-  } catch (error) {
-    message.textContent = error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
-  } finally {
-    saveButton.disabled = false;
-    saveButton.textContent = 'ยืนยันและบันทึกผล';
+      document.getElementById('judgeDialog').close();
+      msgEl.textContent = '';
+    }, 1200);
+  } catch (err) {
+    msgEl.style.color = 'var(--danger)';
+    msgEl.textContent = 'ผิดพลาด: ' + err.message;
   }
 }
-
-function bindEvents() {
-  document.querySelectorAll('.nav-link').forEach(button => {
-    button.addEventListener('click', () => switchView(button.dataset.view));
-  });
-
-  ['competitionFilter', 'dateFilter', 'statusFilter'].forEach(id => {
-    $(`#${id}`).addEventListener('change', () => {
-      renderSchedule();
-      renderResults();
-      renderBracket();
-    });
-  });
-
-  $('#refreshButton').addEventListener('click', () => {
-    loadData().catch(showError);
-  });
-
-  $('#openJudge').addEventListener('click', () => {
-    populateJudgeMatches();
-    $('#formMessage').textContent = '';
-    $('#judgeDialog').showModal();
-  });
-
-  $('#judgeMatch').addEventListener('change', updateJudgeTeamLabels);
-  $('#judgeForm').addEventListener('submit', saveResult);
-}
-
-function showError(error) {
-  const text = error.message || 'ไม่สามารถเชื่อมต่อระบบได้';
-  $('#scheduleList').innerHTML = `<div class="empty">${text}</div>`;
-  $('#liveStatus').textContent = 'เชื่อมต่อข้อมูลไม่สำเร็จ';
-}
-
-bindEvents();
-loadData().catch(showError);
