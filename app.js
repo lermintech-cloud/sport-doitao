@@ -1,4 +1,4 @@
-const API_URL = 'PUT_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycby1AoIUIq8DHZHJMAZJOwx98M_Ki45XoHLBS7Riowhu1beChd5Re5TXLHiBojK-6Edd/exec';
 
 const state = {
   settings: [],
