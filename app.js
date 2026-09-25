@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbw64CXChOxieAaDbfSrqffToA1Io061xC2zLlMibrVvGm3L8OWCB3dJe2n67wOSv2rp/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzR4DyuIjyr-iREAn5nuDs0I0bgI8T8ZTSHHpyKQcstEJFhOulr50fmsKWaKluLOeAK/exec';
 
 let appState = {
   settings: [],
