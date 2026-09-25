@@ -3,177 +3,162 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>การแข่งขันกีฬาเครือข่ายดอยเต่าสหศึกษา ปีการศึกษา 2569</title>
-  <meta name="theme-color" content="#073b4c">
+  <title>การแข่งขันกีฬา-กรีฑานักเรียน เครือข่ายดอยเต่าสหศึกษา 2569</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <a class="brand" href="#home" aria-label="หน้าหลัก">
-        <span class="brand-mark">ก</span>
-        <span>
+      <div class="brand">
+        <div class="brand-badge">ดต</div>
+        <div>
           <strong>กีฬาเครือข่ายดอยเต่าสหศึกษา</strong>
-          <small>ปีการศึกษา 2569</small>
-        </span>
-      </a>
+          <small>ประจำปีการศึกษา 2569 · 5–8 ตุลาคม 2569</small>
+        </div>
+      </div>
       <nav class="nav">
-        <button class="nav-link active" data-view="schedule">โปรแกรมแข่งขัน</button>
-        <button class="nav-link" data-view="bracket">สูจิบัตร / ผังสาย</button>
-        <button class="nav-link" data-view="results">ผลการแข่งขัน</button>
-        <button class="judge-button" id="openJudge">สำหรับกรรมการ</button>
+        <button class="nav-btn active" data-view="schedule">โปรแกรมแข่งขัน</button>
+        <button class="nav-btn" data-view="standings">ตารางคะแนน</button>
+        <button class="nav-btn" data-view="bracket">สูจิบัตร / ผังสาย</button>
+        <button class="nav-btn" data-view="results">ผลการแข่งขัน</button>
+        <button class="judge-access-btn" id="openJudgeModal">🔒 กรรมการ</button>
       </nav>
     </div>
   </header>
 
-  <main class="container">
-    <section class="hero" id="home">
-      <div>
-        <p class="eyebrow">DOI TAO SAHASAUKSA EDUCATION NETWORK</p>
-        <h1 id="eventName">การแข่งขันกีฬาเครือข่ายดอยเต่าสหศึกษา</h1>
-        <p class="hero-description" id="eventDetail">กำลังเชื่อมต่อข้อมูลการแข่งขัน…</p>
+  <main class="main-container">
+    <section class="hero-banner">
+      <div class="hero-text">
+        <span class="hero-chip">DOI TAO SAHASAUKSA GAMES 2026</span>
+        <h1 id="eventName">การแข่งขันกีฬา-กรีฑานักเรียน ระดับเครือข่าย</h1>
+        <p id="eventMeta">สนามกีฬาองค์การบริหารส่วนตำบลโปงทุ่ง อำเภอดอยเต่า จังหวัดเชียงใหม่</p>
       </div>
-      <div class="hero-status">
-        <span class="pulse"></span>
-        <span id="liveStatus">อัปเดตผลการแข่งขัน</span>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <span class="stat-label">รายการแข่ง</span>
+          <strong id="statCompetitions">0</strong>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">คู่แข่งขันทั้งหมด</span>
+          <strong id="statMatches">0</strong>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">แข่งเสร็จสิ้น</span>
+          <strong id="statFinished">0</strong>
+        </div>
       </div>
     </section>
 
-    <section class="stats" id="stats">
-      <article class="stat-card">
-        <span>รายการแข่งขัน</span>
-        <strong id="sportCount">–</strong>
-      </article>
-      <article class="stat-card">
-        <span>จำนวนคู่แข่งขัน</span>
-        <strong id="matchCount">–</strong>
-      </article>
-      <article class="stat-card">
-        <span>แข่งขันจบแล้ว</span>
-        <strong id="finishedCount">–</strong>
-      </article>
-      <article class="stat-card">
-        <span>กำลังแข่งขัน</span>
-        <strong id="liveCount">–</strong>
-      </article>
-    </section>
-
-    <section class="filters">
-      <div class="field">
-        <label for="competitionFilter">ชนิดกีฬา / รุ่น</label>
-        <select id="competitionFilter">
-          <option value="">ทุกประเภทการแข่งขัน</option>
+    <section class="filter-bar">
+      <div class="filter-group">
+        <label for="compFilter">ประเภทกีฬา / รุ่น</label>
+        <select id="compFilter">
+          <option value="">-- ทุกประเภทกีฬา --</option>
         </select>
       </div>
-      <div class="field">
-        <label for="dateFilter">วันแข่งขัน</label>
+      <div class="filter-group">
+        <label for="dateFilter">วันที่แข่งขัน</label>
         <select id="dateFilter">
-          <option value="">ทุกวัน</option>
+          <option value="">-- ทุกวัน --</option>
         </select>
       </div>
-      <div class="field">
-        <label for="statusFilter">สถานะ</label>
+      <div class="filter-group">
+        <label for="statusFilter">สถานะการแข่งขัน</label>
         <select id="statusFilter">
-          <option value="">ทุกสถานะ</option>
-          <option value="scheduled">ยังไม่แข่ง</option>
-          <option value="live">กำลังแข่งขัน</option>
-          <option value="finished">จบการแข่งขัน</option>
+          <option value="">-- ทุกสถานะ --</option>
+          <option value="scheduled">ยังไม่แข่งขัน</option>
+          <option value="live">กำลังแข่งขัน 🟢</option>
+          <option value="finished">จบการแข่งขันแล้ว</option>
         </select>
       </div>
-      <button class="secondary-button" id="refreshButton">รีเฟรชข้อมูล</button>
+      <button class="btn-refresh" id="btnRefresh">🔄 โหลดข้อมูลใหม่</button>
     </section>
 
-    <section class="content-section view active" id="scheduleView">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">MATCH SCHEDULE</p>
-          <h2>โปรแกรมการแข่งขัน</h2>
-        </div>
-        <span class="result-count" id="scheduleCount"></span>
+    <!-- VIEWS -->
+    <div class="view-panel active" id="scheduleView">
+      <div class="panel-header">
+        <h2>โปรแกรมและผลการแข่งขัน</h2>
+        <span class="count-badge" id="scheduleCount">0 คู่</span>
       </div>
-      <div class="match-list" id="scheduleList"></div>
-    </section>
+      <div class="matches-grid" id="scheduleList"></div>
+    </div>
 
-    <section class="content-section view" id="bracketView">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">TOURNAMENT BRACKET</p>
-          <h2>สูจิบัตร / ผังสายการแข่งขัน</h2>
-        </div>
+    <div class="view-panel" id="standingsView">
+      <div class="panel-header">
+        <h2>ตารางคะแนนรอบแบ่งสาย</h2>
+        <p class="panel-sub">คำนวณคะแนนอัตโนมัติจากผลการแข่งขัน (ชนะ 3, เสมอ 1, แพ้ 0)</p>
       </div>
-      <div class="notice">
-        ผังสายจะแสดงทีมที่ผ่านเข้ารอบทันทีเมื่อกรรมการยืนยันผลการแข่งขัน
-      </div>
-      <div id="bracketList"></div>
-    </section>
+      <div id="standingsContainer"></div>
+    </div>
 
-    <section class="content-section view" id="resultsView">
-      <div class="section-title">
-        <div>
-          <p class="eyebrow">MATCH RESULTS</p>
-          <h2>ผลการแข่งขัน</h2>
-        </div>
+    <div class="view-panel" id="bracketView">
+      <div class="panel-header">
+        <h2>สูจิบัตร / ผังสายการแข่งขันรอบแพ้คัดออก</h2>
+        <p class="panel-sub">ระบบจะส่งผู้ชนะและผู้แพ้ไปยังช่องคู่ถัดไปโดยอัตโนมัติเมื่อกรรมการยืนยันผล</p>
       </div>
-      <div class="match-list" id="resultsList"></div>
-    </section>
+      <div id="bracketContainer"></div>
+    </div>
+
+    <div class="view-panel" id="resultsView">
+      <div class="panel-header">
+        <h2>ผลการแข่งขันที่เสร็จสิ้น</h2>
+        <span class="count-badge" id="resultsCount">0 คู่</span>
+      </div>
+      <div class="matches-grid" id="resultsList"></div>
+    </div>
   </main>
 
-  <footer>
-    <p>การแข่งขันกีฬา-กรีฑานักเรียน ระดับเครือข่ายพัฒนาการศึกษาดอยเต่าสหศึกษา ประจำปีการศึกษา 2569</p>
-    <p id="lastUpdated">ยังไม่มีข้อมูลการอัปเดต</p>
+  <footer class="site-footer">
+    <p>ระบบจัดการแข่งขันกีฬาเครือข่ายพัฒนาการศึกษาดอยเต่าสหศึกษา พ.ศ. 2569</p>
+    <p id="lastUpdated">อัปเดตล่าสุด: -</p>
   </footer>
 
-  <dialog id="judgeDialog">
-    <form method="dialog" class="judge-modal" id="judgeForm">
+  <!-- JUDGE MODAL -->
+  <dialog id="judgeDialog" class="modal">
+    <form method="dialog" class="modal-card" id="judgeForm">
       <div class="modal-header">
-        <div>
-          <p class="eyebrow">JUDGE PANEL</p>
-          <h2>บันทึกผลการแข่งขัน</h2>
+        <h3>ระบบบันทึกผลการแข่งขัน (กรรมการ)</h3>
+        <button type="button" class="btn-close" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="filter-group">
+            <label for="judgeCode">รหัสผ่านกรรมการ</label>
+            <input type="password" id="judgeCode" required placeholder="กรอกรหัสผ่าน">
+          </div>
+          <div class="filter-group">
+            <label for="judgeName">ชื่อกรรมการ / ผู้บันทึก</label>
+            <input type="text" id="judgeName" required placeholder="ระบุชื่อ-นามสกุล">
+          </div>
         </div>
-        <button class="icon-button" value="cancel" aria-label="ปิด">×</button>
-      </div>
 
-      <p class="modal-help">
-        เมื่อยืนยันผล ผู้ชนะและผู้แพ้จะถูกส่งไปยังคู่ถัดไปตามผังโดยอัตโนมัติ
-      </p>
-
-      <div class="field">
-        <label for="judgeCode">รหัสกรรมการ</label>
-        <input id="judgeCode" type="password" autocomplete="current-password" required placeholder="กรอกรหัสกรรมการ">
-      </div>
-
-      <div class="field">
-        <label for="judgeName">ชื่อกรรมการ</label>
-        <input id="judgeName" type="text" required placeholder="เช่น นายสมชาย ใจดี">
-      </div>
-
-      <div class="field">
-        <label for="judgeMatch">เลือกคู่แข่งขัน</label>
-        <select id="judgeMatch" required></select>
-      </div>
-
-      <div class="score-grid">
-        <div class="field">
-          <label id="teamALabel" for="scoreA">ทีม A</label>
-          <input id="scoreA" type="number" min="0" inputmode="numeric" required>
+        <div class="filter-group">
+          <label for="judgeMatchSelect">เลือกคู่แข่งขันที่ต้องการบันทึก</label>
+          <select id="judgeMatchSelect" required></select>
         </div>
-        <div class="vs">VS</div>
-        <div class="field">
-          <label id="teamBLabel" for="scoreB">ทีม B</label>
-          <input id="scoreB" type="number" min="0" inputmode="numeric" required>
+
+        <div class="score-input-box">
+          <div class="team-score-side">
+            <span id="labelTeamA" class="team-label-name">ทีม A</span>
+            <input type="number" id="scoreA" min="0" value="0" required class="score-input">
+          </div>
+          <div class="score-vs">VS</div>
+          <div class="team-score-side">
+            <span id="labelTeamB" class="team-label-name">ทีม B</span>
+            <input type="number" id="scoreB" min="0" value="0" required class="score-input">
+          </div>
         </div>
+
+        <div class="filter-group">
+          <label for="judgeNote">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+          <input type="text" id="judgeNote" placeholder="เช่น ชนะจุดโทษ, ยุติการแข่งขัน">
+        </div>
+
+        <div class="modal-msg" id="modalMessage"></div>
       </div>
-
-      <div class="field">
-        <label for="judgeNote">หมายเหตุ</label>
-        <textarea id="judgeNote" rows="3" placeholder="ระบุรายละเอียดเพิ่มเติม หากมี"></textarea>
-      </div>
-
-      <p class="form-message" id="formMessage"></p>
-
-      <div class="modal-actions">
-        <button class="secondary-button" value="cancel">ยกเลิก</button>
-        <button class="primary-button" type="submit" id="saveResultButton">ยืนยันและบันทึกผล</button>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnSetLive">🔴 เปลี่ยนสถานะเป็นกำลังแข่ง</button>
+        <button type="submit" class="btn-primary" id="btnSubmitScore">💾 ยันยันบันทึกผลการแข่งขัน</button>
       </div>
     </form>
   </dialog>
