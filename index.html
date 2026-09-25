@@ -106,25 +106,55 @@ const ath=[
 ["123","4 x 100 เมตร","ชาย","8"],["124","4 x 100 เมตร","หญิง","8"],["125","4 x 100 เมตร","ชาย","10"],["126","4 x 100 เมตร","หญิง","10"],["127","4 x 100 เมตร","ชาย","12"],["128","4 x 100 เมตร","หญิง","12"],["129","4 x 200 เมตร","ชาย","12"],["130","4 x 200 เมตร","หญิง","12"]
 ];
 
-const API_URL = "ยังไม่ได้ตั้งค่า Google Apps Script: https://script.google.com/macros/s/AKfycbynadYEl7vUw0C-vHFz8hgCUf8B3BQ72-U2ww8SmshJLLRKhJQR4yNRdW8LKQG0SentRA/exec"; // ใส่ URL Web App ของ Google Apps Script ที่นี่
+const API_URL = "https://script.google.com/macros/s/AKfycbynadYEl7vUw0C-vHFz8hgCUf8B3BQ72-U2ww8SmshJLLRKhJQR4yNRdW8LKQG0SentRA/exec";
 let resultsData = {};
 let currentUser = localStorage.getItem("committeeName") || "";
 
 function matchKey(sport, matchNo){ return sport + "__" + matchNo; }
 function apiReady(){ return API_URL && API_URL.startsWith("http"); }
 async function loadResults(){
-  if(!apiReady()){ apiNotice.textContent="ยังไม่ได้ตั้งค่า Google Apps Script:"; return; }
-  try{ const r=await fetch(API_URL+"?action=list&t="+Date.now()); resultsData=await r.json(); apiNotice.textContent="🟢 เชื่อมต่อฐานข้อมูลกลางแล้ว • ข้อมูลจะตรงกันทุกเครื่อง"; renderScoreMatches(); renderResults(); }
-  catch(e){ apiNotice.textContent="🔴 เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาตรวจสอบ URL Web App ของ Google Apps Script"; }
+  if(!apiReady()){
+    apiNotice.textContent="🔴 ยังไม่ได้ตั้งค่า Google Apps Script Web App URL";
+    return;
+  }
+  try{
+    const r=await fetch(API_URL+"?action=list&t="+Date.now(),{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const data=await r.json();
+    if(!data || typeof data!=="object" || Array.isArray(data)) throw new Error("รูปแบบข้อมูลไม่ถูกต้อง");
+    resultsData=data;
+    apiNotice.textContent="🟢 เชื่อมต่อฐานข้อมูลกลางแล้ว • ข้อมูลจะตรงกันทุกเครื่อง";
+    if(typeof renderScoreMatches==='function') renderScoreMatches();
+    if(typeof renderResults==='function') renderResults();
+  }catch(e){
+    console.error("loadResults:",e);
+    apiNotice.textContent="🔴 เชื่อมต่อฐานข้อมูลไม่ได้ • ตรวจสอบการ Deploy Web App และสิทธิ์ Anyone";
+  }
 }
 async function saveResult(sport, r){
   if(!apiReady()){ alert("ยังไม่ได้ตั้งค่า API_URL"); return; }
   currentUser=prompt("กรุณาระบุชื่อกรรมการผู้บันทึก", currentUser || "กรรมการ");
-  if(!currentUser) return; localStorage.setItem("committeeName",currentUser);
-  const a=document.getElementById("a_"+r[0]+"_"+sports.indexOf(sport)).value; const b=document.getElementById("b_"+r[0]+"_"+sports.indexOf(sport)).value;
+  if(!currentUser) return;
+  localStorage.setItem("committeeName",currentUser);
+  const idx=sports.indexOf(sport);
+  const aEl=document.getElementById("a_"+r[0]+"_"+idx);
+  const bEl=document.getElementById("b_"+r[0]+"_"+idx);
+  if(!aEl || !bEl){ alert("ไม่พบช่องกรอกคะแนนของคู่นี้"); return; }
+  const a=aEl.value, b=bEl.value;
   if(a===""||b===""||Number(a)<0||Number(b)<0){alert("กรุณากรอกคะแนนให้ครบ");return;}
   const payload={action:"save",sport:sport.n,matchNo:r[0],date:r[1],time:r[2],teamA:r[3],teamB:r[4],scoreA:Number(a),scoreB:Number(b),status:"finished",updatedBy:currentUser};
-  try{ const rr=await fetch(API_URL+"?"+new URLSearchParams(payload)); const out=await rr.json(); if(out.ok){resultsData[matchKey(sport.n,r[0])]=payload; renderScoreMatches(); renderResults(); alert("บันทึกผลเรียบร้อยแล้ว");} else alert(out.error||"บันทึกไม่สำเร็จ"); }catch(e){alert("ไม่สามารถบันทึกข้อมูลได้");}
+  try{
+    const rr=await fetch(API_URL+"?"+new URLSearchParams(payload),{cache:"no-store"});
+    if(!rr.ok) throw new Error("HTTP "+rr.status);
+    const out=await rr.json();
+    if(out.ok){
+      await loadResults();
+      alert("บันทึกผลเรียบร้อยแล้ว");
+    }else alert(out.error||"บันทึกไม่สำเร็จ");
+  }catch(e){
+    console.error("saveResult:",e);
+    alert("ไม่สามารถบันทึกข้อมูลได้\nกรุณาตรวจสอบการ Deploy Google Apps Script เป็น Web App และตั้งสิทธิ์ Anyone");
+  }
 }
 function showScore(b){hide();score.classList.add("active");setNav(b);scoreSport.innerHTML='<option value="">ทุกกีฬา</option>'+sports.map((s,i)=>`<option value="${i}">${esc(s.n)}</option>`).join("");renderScoreMatches();loadResults();}
 function renderScoreMatches(){
