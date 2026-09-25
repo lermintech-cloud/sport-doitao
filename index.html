@@ -113,7 +113,7 @@ let currentUser = localStorage.getItem("committeeName") || "";
 function matchKey(sport, matchNo){ return sport + "__" + matchNo; }
 function apiReady(){ return API_URL && API_URL.startsWith("http"); }
 async function loadResults(){
-  if(!apiReady()){ apiNotice.textContent="ยังไม่ได้ตั้งค่า Google Apps Script: ใส่ URL ในตัวแปร API_URL ใน index.html ก่อนนำขึ้น GitHub"; return; }
+  if(!apiReady()){ apiNotice.textContent="ยังไม่ได้ตั้งค่า Google Apps Script: https://script.google.com/macros/s/AKfycbynadYEl7vUw0C-vHFz8hgCUf8B3BQ72-U2ww8SmshJLLRKhJQR4yNRdW8LKQG0SentRA/exec"; return; }
   try{ const r=await fetch(API_URL+"?action=list&t="+Date.now()); resultsData=await r.json(); apiNotice.textContent="🟢 เชื่อมต่อฐานข้อมูลกลางแล้ว • ข้อมูลจะตรงกันทุกเครื่อง"; renderScoreMatches(); renderResults(); }
   catch(e){ apiNotice.textContent="🔴 เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาตรวจสอบ URL Web App ของ Google Apps Script"; }
 }
